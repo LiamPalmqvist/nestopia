@@ -17,13 +17,15 @@ namespace Nes
             std::cout << "Buffer full? " << (buffer.full() ? "Yes" : "No") << std::endl;
             try
             {
+                std::cout << "Trying to pop from empty buffer" << std::endl;
                 buffer.pop();
                 // If we get here, something went wrong
                 std::cout << "Popped data from empty buffer" << std::endl;
             }
-            catch (const std::runtime_error& e)
+            catch (const std::out_of_range& e)
             {
                 // What we want to happen
+                std::cout << "Tried to pop from buffer" << std::endl;
                 std::cout << e.what() << std::endl;
             }
 
@@ -37,7 +39,12 @@ namespace Nes
             buffer.push(5);
             std::cout << "Buffer full? " << (buffer.full() ? "Yes" : "No") << std::endl;
 
+            int poppedData = buffer.pop();
+
+            buffer.print();
+
             buffer.push(6);
+            buffer.push(7);
 
             std::cout << "Buffer size: " << buffer.size() << std::endl;
             std::cout << "Buffer capacity: " << buffer.capacity() << std::endl;
@@ -45,7 +52,7 @@ namespace Nes
             std::cout << "Buffer empty? " << (buffer.empty() ? "Yes" : "No") << std::endl;
             buffer.print(); // This will print the contents of the buffer, which should be "1 2 3".
 
-            int poppedData = buffer.pop();
+            poppedData = buffer.pop();
             std::cout << "Popped data: " << poppedData << std::endl;
             buffer.print();
 
