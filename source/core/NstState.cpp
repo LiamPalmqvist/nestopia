@@ -41,7 +41,15 @@ namespace Nes
 			#pragma optimize("s", on)
 			#endif
 
-			Saver::Saver(StdStream p,bool c,bool i,dword append)
+			/*!
+			 * The Saver class is responsible for writing state data to a stream.
+			 * The stream is a file which can be loaded by the `Loader` Class
+			 * @param p - The stream to write to
+			 * @param c - Whether to use compression when writing data
+			 * @param i - Whether the state being saved is an internal state (as opposed to a save state)
+			 * @param append - If non-zero, the offset in the stream to append the state data to (used for internal states)
+			 */
+			Saver::Saver(StdStream p, bool c, bool i, dword append)
 			: stream(p), chunks(CHUNK_RESERVE), useCompression(c), internal(i)
 			{
 				NST_COMPILE_ASSERT( CHUNK_RESERVE >= 2 );
@@ -57,6 +65,9 @@ namespace Nes
 				}
 			}
 
+			/*!
+			 * The destructor of the Saver class verifies that all chunks have been properly closed (i.e. that there is only one chunk left in the stack, which is the initial chunk)
+			 */
 			Saver::~Saver()
 			{
 				NST_VERIFY( chunks.Size() == 1 );
@@ -66,6 +77,11 @@ namespace Nes
 			#pragma optimize("", on)
 			#endif
 
+			/*!
+			 * Begins a new chunk of state data. A chunk is a section of the state file which contains related data, and is identified by a 32-bit integer (the `chunk` parameter). The chunk is written to the stream with a placeholder for its length, which is updated when the chunk is ended. Chunks can be nested, allowing for hierarchical organization of state data.
+			 * @param chunk A 32-bit integer that identifies the type of data being written in the chunk. This can be used to differentiate between different types of state data when loading the state later on.
+			 * @return
+			 */
 			Saver& Saver::Begin(dword chunk)
 			{
 				stream.Write32( chunk );
@@ -75,6 +91,10 @@ namespace Nes
 				return *this;
 			}
 
+			/* At this point a chunk has just been fully finalised and its length patched back into the stream.
+			 * if chunks.Size() == 1 after Pop(), this is the top-level chunk closing - i.e. the complete state
+			 * has just been written.
+			 */
 			Saver& Saver::End()
 			{
 				NST_ASSERT( chunks.Size() > 1 );
@@ -85,6 +105,10 @@ namespace Nes
 				stream.Seek( -idword(written + 4) );
 				stream.Write32( written );
 				stream.Seek( written );
+
+				// ----------------------------------------------------------------
+				// INJECT CODE HERE TO RETRIEVE STATE FROM EMULATOR
+				// ----------------------------------------------------------------
 
 				return *this;
 			}
@@ -124,6 +148,8 @@ namespace Nes
 				return *this;
 			}
 
+
+
 			Saver& Saver::Compress(const byte* const data,const dword length)
 			{
 				NST_VERIFY( length );
@@ -152,6 +178,12 @@ namespace Nes
 			#pragma optimize("s", on)
 			#endif
 
+			/*!
+			 * The Loader class is responsible for reading state data from a stream.
+			 * The stream is a file which is supposed to have been saved by the `Saver` Class
+			 * @param p - The stream to read from
+			 * @param c - Whether the data being read was compressed or not (this should match the value of `useCompression` used when saving the state)
+			 */
 			Loader::Loader(StdStream p,bool c)
 			: stream(p), chunks(CHUNK_RESERVE), checkCrc(c)
 			{

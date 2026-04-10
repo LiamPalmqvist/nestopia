@@ -28,11 +28,16 @@
 #include "NstHook.hpp"
 #include "NstState.hpp"
 #include "api/NstApiUser.hpp"
+#include "custom/CustomClass.hpp"
 
 namespace Nes
 {
 	namespace Core
 	{
+		// Custom stuff
+		Custom::CustomClass customClassInstance;
+		// End of custom stuff
+
 		dword Cpu::logged = 0;
 
 		void (Cpu::*const Cpu::opcodes[0x100])() =

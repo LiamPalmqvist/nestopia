@@ -757,6 +757,11 @@ nestopia_SOURCES += \
 	source/fltkui/fltkui_settings.cpp \
 	source/fltkui/fltkui_settings.h
 
+nestopia_SOURCES += \
+    source/custom/CustomClass.cpp \
+    source/custom/CustomClass.hpp \
+    source/custom/RingBuffer.hpp
+
 # install full HTML suite
 if ENABLE_FULL_HTML
 dist_html_DATA += \

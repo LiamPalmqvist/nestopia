@@ -7,11 +7,11 @@
 #pragma once
 
 #include <iostream>
-
+#include "custom/RingBuffer.hpp"
 
 namespace Nes
 {
-    namespace Core
+    namespace Custom
     {
         class CustomClass
         {
