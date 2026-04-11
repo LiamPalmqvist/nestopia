@@ -70,6 +70,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "version.h"
 
+// Custom
+#include "custom/RingBuffer.hpp"
+
 namespace {
 
 int paused{0};
@@ -82,6 +85,8 @@ int screennum{0};
 
 int frames{0};
 int framefrags{0};
+
+RingBuffer<std::vector<uint8_t>> savestates(3600); // 1 minute of savestates at 60fps
 
 bool fdsgame{false};
 
@@ -772,6 +777,22 @@ void FltkUi::set_ffspeed(bool on) {
     }
 
     audiomgr->set_speed(speed);
+}
+
+// Custom
+void FltkUi::rewind(bool on)
+{
+    if (on)
+    {
+        // do rewinding here
+        // try loading a state from the rewind buffer.
+        std::cout << "Rewinding..." << std::endl;
+    }
+    else
+    {
+        // stop rewinding here
+        std::cout << "Stopped Rewinding." << std::endl;
+    }
 }
 
 void FltkUi::run_emulation(bool run) {

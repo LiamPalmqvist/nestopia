@@ -69,3 +69,8 @@ void UiAdapter::quit() {
 void UiAdapter::show_inputmsg(int show) {
     FltkUi::show_inputmsg(show);
 }
+
+void UiAdapter::rewind(bool on)
+{
+    FltkUi::rewind(on);
+}

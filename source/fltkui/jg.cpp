@@ -1589,6 +1589,7 @@ int jg_game_unload(void) {
     return 1;
 }
 
+// TODO: Marking this for later use
 int jg_state_load(const char *filename) {
     std::ifstream statefile(filename, std::ifstream::in|std::ifstream::binary);
     if (statefile.is_open()) {
@@ -1602,6 +1603,7 @@ int jg_state_load(const char *filename) {
 void jg_state_load_raw(const void*) {
 }
 
+// TODO: Marking this for later use
 int jg_state_save(const char *filename) {
     std::ofstream statefile(filename, std::ifstream::out|std::ifstream::binary);
     if (statefile.is_open()) {

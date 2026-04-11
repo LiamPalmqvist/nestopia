@@ -22,11 +22,13 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////////
 
+#include <iostream>
 #include <new>
 #include "NstMachine.hpp"
 #include "NstTrackerMovie.hpp"
 #include "NstTrackerRewinder.hpp"
 #include "NstImage.hpp"
+#include "NstState.hpp"
 #include "api/NstApiMachine.hpp"
 
 namespace Nes
@@ -308,6 +310,7 @@ namespace Nes
 			if (machine.Is(Api::Machine::ON))
 			{
 				++frame;
+				std::cout << "Frame: " << frame << std::endl;
 
 				try
 				{

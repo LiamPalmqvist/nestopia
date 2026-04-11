@@ -357,6 +357,7 @@ namespace Nes
 			}
 		}
 
+		// This function saves the state of the machine, and is used by both the SaveState and SaveStateToFile functions. It is not intended to be called directly by external code.
 		void Machine::SaveState(State::Saver& saver) const
 		{
 			NST_ASSERT( (state & (Api::Machine::GAME|Api::Machine::ON)) > Api::Machine::ON );

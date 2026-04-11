@@ -2,453 +2,498 @@
 // Created by Liam on 23/02/2026.
 //
 
-#ifndef NESTOPIA_FILECOMPARER_HPP
-#define NESTOPIA_FILECOMPARER_HPP
-
-#endif //NESTOPIA_FILECOMPARER_HPP
-
-//
-// Created by Liam on 24/02/2026.
-//
-
 #ifndef FILEDIFFERENCEGRABBER_DATADIFF_HPP
 #define FILEDIFFERENCEGRABBER_DATADIFF_HPP
+#include <fstream>
 
 #endif //FILEDIFFERENCEGRABBER_DATADIFF_HPP
 
 #include <iostream>
+#include "RingBuffer.hpp"
 
-
-//
-// Created by Liam on 24/02/2026.
-//
-
-#ifndef FILEDIFFERENCEGRABBER_DATADIFF_HPP
-#define FILEDIFFERENCEGRABBER_DATADIFF_HPP
-
-#endif //FILEDIFFERENCEGRABBER_DATADIFF_HPP
-
-#include <iostream>
-
-
-class DataDiff
+namespace Nes
 {
-public:
-    struct difference
+    namespace Custom
     {
-        long byteIndex;
-        char oldFileByte;
-
-        difference(long byteIndex, char oldFileByte) : byteIndex(byteIndex), oldFileByte(oldFileByte) {}
-    };
-
-    /*!
-     * This compares two files and creates a vector of `difference` structs which contain the offset as a 32-bit byte and the old byte value from the first file.
-     * @param oldFile the old file
-     * @param newFile the new file
-     * @return std::vector<difference>
-     */
-    static std::vector<difference> CompareFiles(const std::vector<char>& oldFile, const std::vector<char>& newFile)
-    {
-        // This should ensure that the bigger file is always the file that is iterated over
-        bool newIsLarger = false;
-        if (oldFile.size() != newFile.size())
+        // we need this so that we can compare files of any vector type
+        template <typename T>
+        class DataDiff
         {
-            if (oldFile.size() < newFile.size())
+        public:
+            struct difference
             {
-                std::cout << "New file is larger than old file" << std::endl;
-                newIsLarger = true;
-            }
-        }
+                long byteIndex;
+                T oldFileByte;
 
-        std::cout << "Comparing files..." << std::endl;
+                difference(long byteIndex, T oldFileByte) : byteIndex(byteIndex), oldFileByte(oldFileByte) {}
+            };
 
-        const size_t size = newIsLarger ? newFile.size() : oldFile.size();
-        std::cout << "Size of differences: " << size << std::endl;
-
-        std::vector<difference> differences;
-        bool filesEqual = true;
-        try
-        {
-            for (size_t i = 0; i < size; ++i)
+            static std::vector<difference> CompareFiles(const std::vector<T>& oldFile, const std::vector<T>& newFile)
             {
-                // TODO: Make sure that any leftover bytes are added if files are not equal and there are differences left in the old file
-                // Check if we've reached the end of the smaller file, and if so, we can stop comparing since any remaining bytes in the larger file will be considered differences
-                // if (i + 1 >= newIsLarger ? oldFile.size() : newFile.size() && !filesEqual)
-                // {
-                //     differences.push_back(difference(oldFile[i], newFile[i]));
-                // }
-                if (oldFile[i] != newFile[i])
+                std::vector<difference> differences;
+
+                std::cout << "old file size: " << oldFile.size() << std::endl;
+                std::cout << "new file size: " << newFile.size() << std::endl;
+
+                bool newIsLarger = true;
+                if (oldFile.size() != newFile.size())
+                    if (oldFile.size() > newFile.size())
+                        newIsLarger = false;
+
+                if (newIsLarger) // Here, the new file is larger
                 {
-                    filesEqual = false;
-                    difference diff = {static_cast<long>(i), oldFile[i]};
-                    differences.push_back(diff);
-                }
-            }
-        } catch (std::exception& e)
-        {
-            std::cerr << "Error comparing files: " << e.what() << std::endl;
-        }
+                    for (size_t i = 0; i < oldFile.size(); ++i)
+                    {
+                        std::cout << "Comparing byte index " << i << std::endl;
+                        if (oldFile[i] != newFile[i])
+                        {
+                            std::cout << "Found difference at byte index " << i << std::endl;
+                            // create a difference and push it back
+                            difference diff = {static_cast<long>(i), oldFile[i]};
+                            differences.push_back(diff);
+                        }
+                    }
 
-        // const std::string output = filesEqual ? "Files are identical" : "Files are not identical";
-        // std::cout << output << std::endl;
+                    // TODO: Make sure that any leftover bytes are added if files are not equal and there are differences left in the old file
 
-        // std::cout << "Number of differences: " << differences.size() << std::endl;
-        // for (const auto& diff : differences)
-        // {
-        //     std::cout << "Difference at byte index " << diff.byteIndex
-        //             << ": file1 byte = " << std::bitset<8>(diff.oldFileByte);
-        // }
-
-        return differences;
-    }
-
-    static std::vector<char> ReadAllBytes(char const* filename)
-    {
-        std::ifstream ifs(filename, std::ios::binary|std::ios::ate);
-        const std::ifstream::pos_type pos = ifs.tellg();
-
-        std::vector<char>  result(pos);
-
-        ifs.seekg(0, std::ios::beg);
-        ifs.read(reinterpret_cast<std::istream::char_type*>(&result[0]), pos);
-
-        return result;
-    }
-
-    /*!
-     * @param differences the differences between the two files, as generated by `CompareFiles`
-     *
-     * The diff file will be formatted like this:
-     * 1. `filetype=DIF\n` this starts out the file and tells us it is a DIF file
-     * 2. the format of changes will be
-     *     1. binary format of where the change occurs in the file:
-     *         1. 00000001 - the first place
-     *     2. If it's a range of contiguous changes, the first bit will be flipped
-     *         1. 10000001 - a range from the first place
-     *     3. And the size of the change will be added in terms of bytes
-     *         1. 00000010 - 2 contiguous bytes
-     *     4. And finally, the actual changes that happened
-     *         1. 00100100 - the previous state was 00100100
-     * 3. All together an example of a file is as follows:
-     *
-     * "filetype=DIF
-     * 00000001 00100100 10000010 00000011 00001011 01001011 10110011"
-     *
-     * 00000001 - a change at the first byte
-     * 00100100 - what change took place
-     *
-     * 10000010 - a contiguous change from the second byte
-     * 00000011 - for three bytes
-     * 00001011 - the first change
-     * 01001011 - the second change
-     * 10110011 - the third change
-     */
-    static std::string GetDiff(const std::vector<difference> &differences)
-    {
-        std::string outputString; // this will store the output string that we will write to the file at the end, we use a string to avoid the overhead of writing to the file multiple times
-
-        long lastByte = differences.back().byteIndex;
-        std::size_t encodingSize = 8;
-
-        std::cout << "Last byte index: " << lastByte << std::endl;
-
-        if (lastByte > 0xFF)
-        {
-            std::cout << "Bigger than 0xFF" << std::endl;
-            encodingSize = 16;
-            if (lastByte > 0xFFFF)
-            {
-                std::cout << "Bigger than 0xFFFF" << std::endl;
-                encodingSize = 32;
-                // if (lastByte > 0xFFFFFFFF)
-                // {
-                //     std::cout << "Bigger than 0xFFFFFFFF" << std::endl;
-                //     encodingSize = 64;
-                // }
-            }
-        }
-
-        std::cout << "Encoding size: " << encodingSize << " bits" << std::endl;
-
-        outputString += "filetype=DIF";
-
-        switch (encodingSize)
-        {
-        case 8:
-            outputString += "0001"; // the first 4 bits of the file will be the encoding size, which tells us how many bits are used to represent the byte index of the change
-            break;
-        case 16:
-            outputString += "0010";
-            break;
-        case 32:
-            outputString += "0100";
-        default:
-            break;
-        }
-
-        // Iterate through the differences
-        for (int i = 0; i < differences.size(); i++)
-        {
-            std::cout << "Current byte index: " << differences[i].byteIndex;
-            if (i-1 >= 0) std::cout << " Previous byte index: " << differences[i - 1].byteIndex << std::endl;
-            else std::cout << std::endl;
-            // check if the next difference is contiguous with the current one
-            if (i + 1 < differences.size() - 1 && differences[i + 1].byteIndex == differences[i].byteIndex + 1)
-            {
-                // if so, we need to find out how long the contiguous change is and write that out as well
-                int j = 1; // we start at 0 because we haven't checked the next byte yet
-                std::vector<char> changes; // store the changes
-
-                // store the first change
-                changes.push_back(differences[i].oldFileByte);
-
-                while (differences[i+j].byteIndex == differences[i+j - 1].byteIndex + 1)
+                } else // Here, the old file is larger
                 {
-                    changes.push_back(differences[i+j].oldFileByte);
+                    for (size_t i = 0; i < newFile.size(); ++i)
+                    {
+                        if (oldFile[i] != newFile[i])
+                        {
+                            // we still want the old file since that's what we want to save
+                            difference diff = {static_cast<long>(i), oldFile[i]};
+                            differences.push_back(diff);
+                        }
+                    }
 
-                    j++;
+                    // TODO: Make sure that any leftover bytes are added if files are not equal and there are differences left in the old file
+
                 }
+
+                return differences;
+            }
+
+            std::vector<T> applyDifferences(std::vector<T>& file, const std::vector<difference>& differences)
+            {
+                for (const auto& diff : differences)
+                {
+                    file[diff.byteIndex] = diff.oldFileByte;
+                }
+
+                return file;
+            }
+
+            /*!
+             * This compares two files and creates a vector of `difference` structs which contain the offset as a 32-bit byte and the old byte value from the first file.
+             * @param oldFile the old file
+             * @param newFile the new file
+             * @return std::vector<difference>
+             */
+            // static std::vector<difference> CompareFiles(const std::vector<char>& oldFile, const std::vector<char>& newFile)
+            // {
+            //     // This should ensure that the bigger file is always the file that is iterated over
+            //     bool newIsLarger = false;
+            //     if (oldFile.size() != newFile.size())
+            //     {
+            //         if (oldFile.size() < newFile.size())
+            //         {
+            //             std::cout << "New file is larger than old file" << std::endl;
+            //             newIsLarger = true;
+            //         }
+            //     }
+            //
+            //     std::cout << "Comparing files..." << std::endl;
+            //
+            //     const size_t size = newIsLarger ? newFile.size() : oldFile.size();
+            //     std::cout << "Size of differences: " << size << std::endl;
+            //
+            //     std::vector<difference> differences;
+            //     bool filesEqual = true;
+            //     try
+            //     {
+            //         for (size_t i = 0; i < size; ++i)
+            //         {
+            //             // TODO: Make sure that any leftover bytes are added if files are not equal and there are differences left in the old file
+            //             // Check if we've reached the end of the smaller file, and if so, we can stop comparing since any remaining bytes in the larger file will be considered differences
+            //             // if (i + 1 >= newIsLarger ? oldFile.size() : newFile.size() && !filesEqual)
+            //             // {
+            //             //     differences.push_back(difference(oldFile[i], newFile[i]));
+            //             // }
+            //             if (oldFile[i] != newFile[i])
+            //             {
+            //                 filesEqual = false;
+            //                 difference diff = {static_cast<long>(i), oldFile[i]};
+            //                 differences.push_back(diff);
+            //             }
+            //         }
+            //     } catch (std::exception& e)
+            //     {
+            //         std::cerr << "Error comparing files: " << e.what() << std::endl;
+            //     }
+            //
+            //     // const std::string output = filesEqual ? "Files are identical" : "Files are not identical";
+            //     // std::cout << output << std::endl;
+            //
+            //     // std::cout << "Number of differences: " << differences.size() << std::endl;
+            //     // for (const auto& diff : differences)
+            //     // {
+            //     //     std::cout << "Difference at byte index " << diff.byteIndex
+            //     //             << ": file1 byte = " << std::bitset<8>(diff.oldFileByte);
+            //     // }
+            //
+            //     return differences;
+            // }
+
+            static std::vector<char> ReadAllBytes(char const* filename)
+            {
+                std::ifstream ifs(filename, std::ios::binary|std::ios::ate);
+                const std::ifstream::pos_type pos = ifs.tellg();
+
+                std::vector<char>  result(pos);
+
+                ifs.seekg(0, std::ios::beg);
+                ifs.read(reinterpret_cast<std::istream::char_type*>(&result[0]), pos);
+
+                return result;
+            }
+
+            /*!
+             * @param differences the differences between the two files, as generated by `CompareFiles`
+             *
+             * The diff file will be formatted like this:
+             * 1. `filetype=DIF\n` this starts out the file and tells us it is a DIF file
+             * 2. the format of changes will be
+             *     1. binary format of where the change occurs in the file:
+             *         1. 00000001 - the first place
+             *     2. If it's a range of contiguous changes, the first bit will be flipped
+             *         1. 10000001 - a range from the first place
+             *     3. And the size of the change will be added in terms of bytes
+             *         1. 00000010 - 2 contiguous bytes
+             *     4. And finally, the actual changes that happened
+             *         1. 00100100 - the previous state was 00100100
+             * 3. All together an example of a file is as follows:
+             *
+             * "filetype=DIF
+             * 00000001 00100100 10000010 00000011 00001011 01001011 10110011"
+             *
+             * 00000001 - a change at the first byte
+             * 00100100 - what change took place
+             *
+             * 10000010 - a contiguous change from the second byte
+             * 00000011 - for three bytes
+             * 00001011 - the first change
+             * 01001011 - the second change
+             * 10110011 - the third change
+             */
+            static std::string GetDiff(const std::vector<difference> &differences)
+            {
+                std::string outputString; // this will store the output string that we will write to the file at the end, we use a string to avoid the overhead of writing to the file multiple times
+
+                long lastByte = differences.back().byteIndex;
+                std::size_t encodingSize = 8;
+
+                std::cout << "Last byte index: " << lastByte << std::endl;
+
+                if (lastByte > 0xFF)
+                {
+                    std::cout << "Bigger than 0xFF" << std::endl;
+                    encodingSize = 16;
+                    if (lastByte > 0xFFFF)
+                    {
+                        std::cout << "Bigger than 0xFFFF" << std::endl;
+                        encodingSize = 32;
+                        // if (lastByte > 0xFFFFFFFF)
+                        // {
+                        //     std::cout << "Bigger than 0xFFFFFFFF" << std::endl;
+                        //     encodingSize = 64;
+                        // }
+                    }
+                }
+
+                std::cout << "Encoding size: " << encodingSize << " bits" << std::endl;
+
+                outputString += "filetype=DIF";
 
                 switch (encodingSize)
                 {
-                default:
-                    outputString += std::bitset<8>(differences[i].byteIndex | 0b10000000).to_string(); // the place where the first contiguous change occurs, with the first bit flipped to indicate that it is a contiguous change
-                    outputString += std::bitset<8>(j).to_string(); // the length of the contiguous change
+                case 8:
+                    outputString += "0001"; // the first 4 bits of the file will be the encoding size, which tells us how many bits are used to represent the byte index of the change
                     break;
                 case 16:
-                    outputString += std::bitset<16>(differences[i].byteIndex | 0b1000000000000000).to_string(); // the place where the first contiguous change occurs, with the first bit flipped to indicate that it is a contiguous change
-                    outputString += std::bitset<16>(j).to_string(); // the length of the contiguous change
+                    outputString += "0010";
                     break;
                 case 32:
-                    outputString += std::bitset<32>(differences[i].byteIndex | 0b10000000000000000000000000000000).to_string(); // the place where the first contiguous change occurs, with the first bit flipped to indicate that it is a contiguous change
-                    outputString += std::bitset<32>(j).to_string(); // the length of the contiguous change
-                    break;
-                }
-
-                for (char change : changes)
-                {
-                    outputString += std::bitset<8>(change).to_string(); // the rest of the changes that took place
-                }
-
-                std::cout << "Contiguous change at byte index " << differences[i].byteIndex << " for " << j << " bytes" << std::endl;
-
-                i += j - 1; // we need to move the index past the contiguous change
-            } else
-            {
-                switch (encodingSize)
-                {
+                    outputString += "0100";
                 default:
-                    outputString += std::bitset<8>(differences[i].byteIndex).to_string(); // the place where the first contiguous change occurs, with the first bit flipped to indicate that it is a contiguous change
-                    break;
-                case 16:
-                    outputString += std::bitset<16>(differences[i].byteIndex).to_string(); // the place where the first contiguous change occurs, with the first bit flipped to indicate that it is a contiguous change
-                    break;
-                case 32:
-                    outputString += std::bitset<32>(differences[i].byteIndex).to_string(); // the place where the first contiguous change occurs, with the first bit flipped to indicate that it is a contiguous change
                     break;
                 }
-                // if not, we need to just add the difference to the output string
-                outputString += std::bitset<8>(differences[i].oldFileByte).to_string();
-            }
-        }
 
-        std::cout << outputString << std::endl;
-        return outputString;
-    }
-
-    /*!
-     * Writes the output string to the specified file. This is done at the end of the program to avoid the overhead of writing to the file multiple times, as we can build up the entire output string in memory and then write it all at once.
-     * @param outputFilename the file to write to
-     * @param outputString the string to write to the file
-     */
-    static void WriteFile(const char* outputFilename, const std::string& outputString)
-    {
-        std::ofstream output(outputFilename, std::ios::out | std::ios::trunc);
-        if (!output.is_open())
-        {
-            std::cerr << "Failed to open output file" << std::endl;
-            return;
-        }
-
-        output << outputString;
-        output.close();
-    }
-
-    /*!
-     * This function takes in a diff string, as generated by `GetDiff`, and parses it to extract the differences between the two files. It returns a vector of `difference` structs, which contain the byte index and the bytes from both files at that index.
-     * @return
-     */
-    static std::vector<difference> ReverseDiff(const std::string& diff)
-    {
-        std::string outputString;
-
-        // first we need to check that the file opens with "filetype=DIF0000", and if it doesn't, we should return an error
-        if (diff.size() < 12 || std::string(diff.begin(), diff.begin() + 12) != "filetype=DIF")
-        {
-            std::cout << std::string(diff.begin(), diff.begin() + 12) << std::endl;
-            std::cerr << "Invalid diff file format" << std::endl;
-            return {};
-        }
-
-        std::cout << "Size of diff string: " << diff.size() << std::endl;
-        std::vector<difference> differences;
-        std::bitset<8> mask_8 = 0b10000000;
-        std::bitset<8> antimask_8 = 0b01111111;
-        std::bitset<16> mask_16 = 0b1000000000000000;
-        std::bitset<16> antimask_16 = 0b0111111111111111111;
-        std::bitset<32> mask_32 = 0b10000000000000000000000000000000;
-        std::bitset<32> antimask_32 = 0b01111111111111111111111111111111;
-
-        auto diffSize = std::string(diff.begin() + 12, diff.begin() + 16);
-        if (diffSize == "0001")
-        {
-            // Start at index 15 because the first 16 characters are the file type and padding
-            for (size_t i = 16; i < diff.size(); i++) // Iterate over the diff
-            {
-                // first, check the first 32 characters to get the index of the change
-                std::bitset<8> index = std::bitset<8>(diff.substr(i, i + 8));
-                std::cout << "Index: " << index.to_string() << std::endl;
-
-                if ((mask_8 & index) == mask_8)
+                // Iterate through the differences
+                for (int i = 0; i < differences.size(); i++)
                 {
-                    // find the length of the contiguous change by checking the next 32 characters
-                    std::bitset<8> length = std::bitset<8>(diff.substr(i + 8, i + 16));
-                    std::cout << "Length: " << length.to_string() << std::endl;
-                    index = antimask_8 & index; // we need to set the first bit back to 0 to get the actual byte index
-                    std::cout << "Contiguous change at byte index " << index.to_ullong() << " for " << length.to_ulong() <<
-                        " bytes" << std::endl;
-
-                    // finally, we read the next length * 8 characters to get the actual changes that took place
-                    for (int j = 0; j < length.to_ulong(); j++)
+                    std::cout << "Current byte index: " << differences[i].byteIndex;
+                    if (i-1 >= 0) std::cout << " Previous byte index: " << differences[i - 1].byteIndex << std::endl;
+                    else std::cout << std::endl;
+                    // check if the next difference is contiguous with the current one
+                    if (i + 1 < differences.size() - 1 && differences[i + 1].byteIndex == differences[i].byteIndex + 1)
                     {
-                        std::cout << "Change: " << std::bitset<8>(diff.substr(i + 16 + j * 8, i + 24 + j * 8)) << std::endl;
-                        differences.emplace_back(static_cast<long>(index.to_ullong() + j),
-                                                 static_cast<char>(std::bitset<8>(
-                                                     diff.substr(i + 16 + j * 8, i + 24 + j * 8)).to_ulong()));
-                    }
-                    i += 16 + length.to_ulong() * 8 - 1; // we need to move the index past the contiguous change
-                }
-                else
-                {
-                    std::cout << "Non-contiguous change at byte index " << i << std::endl;
-                    std::cout << "Binary number: " << std::bitset<8>(diff.substr(i + 8, i + 8 + 8)) << std::endl;
-                    differences.emplace_back(static_cast<long>(index.to_ullong()),
-                                             static_cast<char>(std::bitset<8>(diff.substr(i + 8, i + 8 + 8)).to_ulong()));
+                        // if so, we need to find out how long the contiguous change is and write that out as well
+                        int j = 1; // we start at 0 because we haven't checked the next byte yet
+                        std::vector<char> changes; // store the changes
 
-                    i += 8 + 7; // Move the index past the index length + the change
-                }
-                // turn it into a 32-bit binary number
-            }
-        } else if (diffSize == "0010")
-        {
-            // Start at index 15 because the first 16 characters are the file type and padding
-            for (size_t i = 16; i < diff.size(); i++) // Iterate over the diff
-            {
-                // first, check the first 32 characters to get the index of the change
-                std::bitset<16> index = std::bitset<16>(diff.substr(i, i + 16));
-                std::cout << "Index: " << index.to_string() << std::endl;
+                        // store the first change
+                        changes.push_back(differences[i].oldFileByte);
 
-                if ((mask_16 & index) == mask_16)
-                {
-                    // find the length of the contiguous change by checking the next 32 characters
-                    std::bitset<16> length = std::bitset<16>(diff.substr(i + 16, i + 32));
-                    std::cout << "Length: " << length.to_string() << std::endl;
-                    index = antimask_16 & index; // we need to set the first bit back to 0 to get the actual byte index
-                    std::cout << "Contiguous change at byte index " << index.to_ullong() << " for " << length.to_ulong() <<
-                        " bytes" << std::endl;
+                        while (differences[i+j].byteIndex == differences[i+j - 1].byteIndex + 1)
+                        {
+                            changes.push_back(differences[i+j].oldFileByte);
 
-                    // finally, we read the next length * 8 characters to get the actual changes that took place
-                    for (int j = 0; j < length.to_ulong(); j++)
+                            j++;
+                        }
+
+                        switch (encodingSize)
+                        {
+                        default:
+                            outputString += std::bitset<8>(differences[i].byteIndex | 0b10000000).to_string(); // the place where the first contiguous change occurs, with the first bit flipped to indicate that it is a contiguous change
+                            outputString += std::bitset<8>(j).to_string(); // the length of the contiguous change
+                            break;
+                        case 16:
+                            outputString += std::bitset<16>(differences[i].byteIndex | 0b1000000000000000).to_string(); // the place where the first contiguous change occurs, with the first bit flipped to indicate that it is a contiguous change
+                            outputString += std::bitset<16>(j).to_string(); // the length of the contiguous change
+                            break;
+                        case 32:
+                            outputString += std::bitset<32>(differences[i].byteIndex | 0b10000000000000000000000000000000).to_string(); // the place where the first contiguous change occurs, with the first bit flipped to indicate that it is a contiguous change
+                            outputString += std::bitset<32>(j).to_string(); // the length of the contiguous change
+                            break;
+                        }
+
+                        for (char change : changes)
+                        {
+                            outputString += std::bitset<8>(change).to_string(); // the rest of the changes that took place
+                        }
+
+                        std::cout << "Contiguous change at byte index " << differences[i].byteIndex << " for " << j << " bytes" << std::endl;
+
+                        i += j - 1; // we need to move the index past the contiguous change
+                    } else
                     {
-                        std::cout << "Change: " << std::bitset<8>(diff.substr(i + 32 + j * 8, i + 48 + j * 8)) << std::endl;
-                        differences.emplace_back(static_cast<long>(index.to_ullong() + j),
-                                                 static_cast<char>(std::bitset<8>(
-                                                     diff.substr(i + 32 + j * 8, i + 48 + j * 8)).to_ulong()));
+                        switch (encodingSize)
+                        {
+                        default:
+                            outputString += std::bitset<8>(differences[i].byteIndex).to_string(); // the place where the first contiguous change occurs, with the first bit flipped to indicate that it is a contiguous change
+                            break;
+                        case 16:
+                            outputString += std::bitset<16>(differences[i].byteIndex).to_string(); // the place where the first contiguous change occurs, with the first bit flipped to indicate that it is a contiguous change
+                            break;
+                        case 32:
+                            outputString += std::bitset<32>(differences[i].byteIndex).to_string(); // the place where the first contiguous change occurs, with the first bit flipped to indicate that it is a contiguous change
+                            break;
+                        }
+                        // if not, we need to just add the difference to the output string
+                        outputString += std::bitset<8>(differences[i].oldFileByte).to_string();
                     }
-                    i += 32 + length.to_ulong() * 8 - 1; // we need to move the index past the contiguous change
                 }
-                else
-                {
-                    std::cout << "Non-contiguous change at byte index " << i << std::endl;
-                    std::cout << "Binary number: " << std::bitset<8>(diff.substr(i + 16, i + 16 + 8)) << std::endl;
-                    differences.emplace_back(static_cast<long>(index.to_ullong()),
-                                             static_cast<char>(std::bitset<8>(diff.substr(i + 16, i + 16 + 8)).to_ulong()));
 
-                    i += 16 + 7; // Move the index past the index length + the change
-                }
-                // turn it into a 32-bit binary number
+                std::cout << outputString << std::endl;
+                return outputString;
             }
-        } else if (diffSize == "0100")
-        {
-            // Start at index 15 because the first 16 characters are the file type and padding
-            for (size_t i = 16; i < diff.size(); i++) // Iterate over the diff
+
+            /*!
+             * Writes the output string to the specified file. This is done at the end of the program to avoid the overhead of writing to the file multiple times, as we can build up the entire output string in memory and then write it all at once.
+             * @param outputFilename the file to write to
+             * @param outputString the string to write to the file
+             */
+            static void WriteFile(const char* outputFilename, const std::string& outputString)
             {
-                // first, check the first 32 characters to get the index of the change
-                std::bitset<32> index = std::bitset<32>(diff.substr(i, i + 32));
-                std::cout << "Index: " << index.to_string() << std::endl;
-
-                if ((mask_32 & index) == mask_32)
+                std::ofstream output(outputFilename, std::ios::out | std::ios::trunc);
+                if (!output.is_open())
                 {
-                    // find the length of the contiguous change by checking the next 32 characters
-                    std::bitset<32> length = std::bitset<32>(diff.substr(i + 32, i + 64));
-                    std::cout << "Length: " << length.to_string() << std::endl;
-                    index = antimask_32 & index; // we need to set the first bit back to 0 to get the actual byte index
-                    std::cout << "Contiguous change at byte index " << index.to_ullong() << " for " << length.to_ulong() <<
-                        " bytes" << std::endl;
-
-                    // finally, we read the next length * 8 characters to get the actual changes that took place
-                    for (int j = 0; j < length.to_ulong(); j++)
-                    {
-                        std::cout << "Change: " << std::bitset<8>(diff.substr(i + 64 + j * 8, i + 72 + j * 8)) << std::endl;
-                        differences.emplace_back(static_cast<long>(index.to_ullong() + j),
-                                                 static_cast<char>(std::bitset<8>(
-                                                     diff.substr(i + 64 + j * 8, i + 72 + j * 8)).to_ulong()));
-                    }
-                    i += 64 + length.to_ulong() * 8 - 1; // we need to move the index past the contiguous change
+                    std::cerr << "Failed to open output file" << std::endl;
+                    return;
                 }
-                else
-                {
-                    std::cout << "Non-contiguous change at byte index " << i << std::endl;
-                    std::cout << "Binary number: " << std::bitset<8>(diff.substr(i + 32, i + 32 + 8)) << std::endl;
-                    differences.emplace_back(static_cast<long>(index.to_ullong()),
-                                             static_cast<char>(std::bitset<8>(diff.substr(i + 32, i + 32 + 8)).to_ulong()));
 
-                    i += 32 + 7; // Move the index past the index length + the change
-                }
-                // turn it into a 32-bit binary number
+                output << outputString;
+                output.close();
             }
-        } else
-        {
-            std::cerr << "Invalid encoding size in diff file" << std::endl;
-            return {};
-        }
 
-        return differences;
+            /*!
+             * This function takes in a diff string, as generated by `GetDiff`, and parses it to extract the differences between the two files. It returns a vector of `difference` structs, which contain the byte index and the bytes from both files at that index.
+             * @return
+             */
+            static std::vector<difference> ReverseDiff(const std::string& diff)
+            {
+                std::string outputString;
+
+                // first we need to check that the file opens with "filetype=DIF0000", and if it doesn't, we should return an error
+                if (diff.size() < 12 || std::string(diff.begin(), diff.begin() + 12) != "filetype=DIF")
+                {
+                    std::cout << std::string(diff.begin(), diff.begin() + 12) << std::endl;
+                    std::cerr << "Invalid diff file format" << std::endl;
+                    return {};
+                }
+
+                std::cout << "Size of diff string: " << diff.size() << std::endl;
+                std::vector<difference> differences;
+                std::bitset<8> mask_8 = 0b10000000;
+                std::bitset<8> antimask_8 = 0b01111111;
+                std::bitset<16> mask_16 = 0b1000000000000000;
+                std::bitset<16> antimask_16 = 0b0111111111111111111;
+                std::bitset<32> mask_32 = 0b10000000000000000000000000000000;
+                std::bitset<32> antimask_32 = 0b01111111111111111111111111111111;
+
+                auto diffSize = std::string(diff.begin() + 12, diff.begin() + 16);
+                if (diffSize == "0001")
+                {
+                    // Start at index 15 because the first 16 characters are the file type and padding
+                    for (size_t i = 16; i < diff.size(); i++) // Iterate over the diff
+                    {
+                        // first, check the first 32 characters to get the index of the change
+                        std::bitset<8> index = std::bitset<8>(diff.substr(i, i + 8));
+                        std::cout << "Index: " << index.to_string() << std::endl;
+
+                        if ((mask_8 & index) == mask_8)
+                        {
+                            // find the length of the contiguous change by checking the next 32 characters
+                            std::bitset<8> length = std::bitset<8>(diff.substr(i + 8, i + 16));
+                            std::cout << "Length: " << length.to_string() << std::endl;
+                            index = antimask_8 & index; // we need to set the first bit back to 0 to get the actual byte index
+                            std::cout << "Contiguous change at byte index " << index.to_ullong() << " for " << length.to_ulong() <<
+                                " bytes" << std::endl;
+
+                            // finally, we read the next length * 8 characters to get the actual changes that took place
+                            for (int j = 0; j < length.to_ulong(); j++)
+                            {
+                                std::cout << "Change: " << std::bitset<8>(diff.substr(i + 16 + j * 8, i + 24 + j * 8)) << std::endl;
+                                differences.emplace_back(static_cast<long>(index.to_ullong() + j),
+                                                         static_cast<char>(std::bitset<8>(
+                                                             diff.substr(i + 16 + j * 8, i + 24 + j * 8)).to_ulong()));
+                            }
+                            i += 16 + length.to_ulong() * 8 - 1; // we need to move the index past the contiguous change
+                        }
+                        else
+                        {
+                            std::cout << "Non-contiguous change at byte index " << i << std::endl;
+                            std::cout << "Binary number: " << std::bitset<8>(diff.substr(i + 8, i + 8 + 8)) << std::endl;
+                            differences.emplace_back(static_cast<long>(index.to_ullong()),
+                                                     static_cast<char>(std::bitset<8>(diff.substr(i + 8, i + 8 + 8)).to_ulong()));
+
+                            i += 8 + 7; // Move the index past the index length + the change
+                        }
+                        // turn it into a 32-bit binary number
+                    }
+                } else if (diffSize == "0010")
+                {
+                    // Start at index 15 because the first 16 characters are the file type and padding
+                    for (size_t i = 16; i < diff.size(); i++) // Iterate over the diff
+                    {
+                        // first, check the first 32 characters to get the index of the change
+                        std::bitset<16> index = std::bitset<16>(diff.substr(i, i + 16));
+                        std::cout << "Index: " << index.to_string() << std::endl;
+
+                        if ((mask_16 & index) == mask_16)
+                        {
+                            // find the length of the contiguous change by checking the next 32 characters
+                            std::bitset<16> length = std::bitset<16>(diff.substr(i + 16, i + 32));
+                            std::cout << "Length: " << length.to_string() << std::endl;
+                            index = antimask_16 & index; // we need to set the first bit back to 0 to get the actual byte index
+                            std::cout << "Contiguous change at byte index " << index.to_ullong() << " for " << length.to_ulong() <<
+                                " bytes" << std::endl;
+
+                            // finally, we read the next length * 8 characters to get the actual changes that took place
+                            for (int j = 0; j < length.to_ulong(); j++)
+                            {
+                                std::cout << "Change: " << std::bitset<8>(diff.substr(i + 32 + j * 8, i + 48 + j * 8)) << std::endl;
+                                differences.emplace_back(static_cast<long>(index.to_ullong() + j),
+                                                         static_cast<char>(std::bitset<8>(
+                                                             diff.substr(i + 32 + j * 8, i + 48 + j * 8)).to_ulong()));
+                            }
+                            i += 32 + length.to_ulong() * 8 - 1; // we need to move the index past the contiguous change
+                        }
+                        else
+                        {
+                            std::cout << "Non-contiguous change at byte index " << i << std::endl;
+                            std::cout << "Binary number: " << std::bitset<8>(diff.substr(i + 16, i + 16 + 8)) << std::endl;
+                            differences.emplace_back(static_cast<long>(index.to_ullong()),
+                                                     static_cast<char>(std::bitset<8>(diff.substr(i + 16, i + 16 + 8)).to_ulong()));
+
+                            i += 16 + 7; // Move the index past the index length + the change
+                        }
+                        // turn it into a 32-bit binary number
+                    }
+                } else if (diffSize == "0100")
+                {
+                    // Start at index 15 because the first 16 characters are the file type and padding
+                    for (size_t i = 16; i < diff.size(); i++) // Iterate over the diff
+                    {
+                        // first, check the first 32 characters to get the index of the change
+                        std::bitset<32> index = std::bitset<32>(diff.substr(i, i + 32));
+                        std::cout << "Index: " << index.to_string() << std::endl;
+
+                        if ((mask_32 & index) == mask_32)
+                        {
+                            // find the length of the contiguous change by checking the next 32 characters
+                            std::bitset<32> length = std::bitset<32>(diff.substr(i + 32, i + 64));
+                            std::cout << "Length: " << length.to_string() << std::endl;
+                            index = antimask_32 & index; // we need to set the first bit back to 0 to get the actual byte index
+                            std::cout << "Contiguous change at byte index " << index.to_ullong() << " for " << length.to_ulong() <<
+                                " bytes" << std::endl;
+
+                            // finally, we read the next length * 8 characters to get the actual changes that took place
+                            for (int j = 0; j < length.to_ulong(); j++)
+                            {
+                                std::cout << "Change: " << std::bitset<8>(diff.substr(i + 64 + j * 8, i + 72 + j * 8)) << std::endl;
+                                differences.emplace_back(static_cast<long>(index.to_ullong() + j),
+                                                         static_cast<char>(std::bitset<8>(
+                                                             diff.substr(i + 64 + j * 8, i + 72 + j * 8)).to_ulong()));
+                            }
+                            i += 64 + length.to_ulong() * 8 - 1; // we need to move the index past the contiguous change
+                        }
+                        else
+                        {
+                            std::cout << "Non-contiguous change at byte index " << i << std::endl;
+                            std::cout << "Binary number: " << std::bitset<8>(diff.substr(i + 32, i + 32 + 8)) << std::endl;
+                            differences.emplace_back(static_cast<long>(index.to_ullong()),
+                                                     static_cast<char>(std::bitset<8>(diff.substr(i + 32, i + 32 + 8)).to_ulong()));
+
+                            i += 32 + 7; // Move the index past the index length + the change
+                        }
+                        // turn it into a 32-bit binary number
+                    }
+                } else
+                {
+                    std::cerr << "Invalid encoding size in diff file" << std::endl;
+                    return {};
+                }
+
+                return differences;
+            }
+
+            static void ReverseFile(const char* newFile, const char* outputFile, const std::vector<difference>& differences)
+            {
+                std::ifstream contents(newFile, std::ios::in);
+                if (!contents.is_open())
+                {
+                    std::cerr << "Failed to open diff file" << std::endl;
+                    return;
+                }
+
+                std::vector<char> bytes = ReadAllBytes(newFile);
+
+                contents.close();
+
+                std::ofstream output(outputFile, std::ios::out | std::ios::trunc);
+
+                for (const auto& diff : differences)
+                {
+                    bytes[diff.byteIndex] = diff.oldFileByte;
+                }
+
+                output << std::string(bytes.begin(), bytes.end());
+
+                output.close();
+            }
+        };
     }
-
-    static void ReverseFile(const char* newFile, const char* outputFile, const std::vector<difference>& differences)
-    {
-        std::ifstream contents(newFile, std::ios::in);
-        if (!contents.is_open())
-        {
-            std::cerr << "Failed to open diff file" << std::endl;
-            return;
-        }
-
-        std::vector<char> bytes = ReadAllBytes(newFile);
-
-        contents.close();
-
-        std::ofstream output(outputFile, std::ios::out | std::ios::trunc);
-
-        for (const auto& diff : differences)
-        {
-            bytes[diff.byteIndex] = diff.oldFileByte;
-        }
-
-        output << std::string(bytes.begin(), bytes.end());
-
-        output.close();
-    }
-};
+}

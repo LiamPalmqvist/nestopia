@@ -56,16 +56,17 @@ jg_inputinfo_t *inputinfo[MAXPORTS]{nullptr};
 jg_inputstate_t uistate;
 jg_inputinfo_t uiinfo;
 
-constexpr size_t NDEFS_UI = 14;
+constexpr size_t NDEFS_UI = 15;
 const char *defs_ui[NDEFS_UI] = {
     "ResetSoft", "ResetHard", "FDSNextSide", "FDSInsertEject",
     "QuickSave1", "QuickSave2", "QuickLoad1", "QuickLoad2",
-    "Fullscreen", "Pause", "Mute", "FastForward", "Screenshot", "Quit"
+    "Fullscreen", "Pause", "Mute", "FastForward", "Screenshot", "Quit", "Rewind"
 };
 
+    // defined using codes from SDL2, but with 0xffbd added to prevent conflicts with actual keyboard keys
 const int ui_defaults[NDEFS_UI - 1] = {
     0xffbd + 1, 0xffbd + 2, 0xffbd + 3, 0xffbd + 4, 0xffbd + 5,
-    0xffbd + 6, 0xffbd + 7, 0xffbd + 8, 'f', 'p', 'm', '`', 0xffbd + 9
+    0xffbd + 6, 0xffbd + 7, 0xffbd + 8, 'f', 'p', 'm', '`', 0xffbd + 9, 0x33
 };
 
 bool uiprev[NDEFS_UI]{};
@@ -517,54 +518,60 @@ void InputManager::event(int x, int y) {
     }
 }
 
-void InputManager::ui_events() {
+void InputManager::ui_events()
+{
     // Process any UI events - need to make sure it went from true to false to
     // emulate a "keyup" event
     for (size_t i = 0; i < NDEFS_UI; ++i) {
         if (uiprev[i] && !uistate.button[i]) {
             switch (i) {
-                case 0: // ResetSoft
-                    jgm.reset(0);
-                    break;
-                case 1: // ResetHard
-                    jgm.reset(1);
-                    break;
-                case 2: // FDSInsertEject
-                    jgm.media_insert();
-                    break;
-                case 3: // FDSNextSide
-                    jgm.media_select();
-                    break;
-                case 4: // QuickSave1
-                    jgm.state_qsave(0);
-                    break;
-                case 5: // QuickSave2
-                    jgm.state_qsave(1);
-                    break;
-                case 6: // QuickLoad1
-                    jgm.state_qload(0);
-                    break;
-                case 7: // QuickLoad2
-                    jgm.state_qload(1);
-                    break;
-                case 8: // Fullscreen
-                    UiAdapter::fullscreen();
-                    break;
-                case 9: // Pause
-                    UiAdapter::pause();
-                    break;
-                case 10: // Mute
-                    UiAdapter::mute();
-                    break;
-                case 11: // FastForward
-                    UiAdapter::fastforward(false);
-                    break;
-                case 12: // Screenshot
-                    UiAdapter::screenshot();
-                    break;
-                case 13: // Quit
-                    UiAdapter::quit();
-                    break;
+            case 0: // ResetSoft
+                jgm.reset(0);
+                break;
+            case 1: // ResetHard
+                jgm.reset(1);
+                break;
+            case 2: // FDSInsertEject
+                jgm.media_insert();
+                break;
+            case 3: // FDSNextSide
+                jgm.media_select();
+                break;
+            case 4: // QuickSave1
+                jgm.state_qsave(0);
+                break;
+            case 5: // QuickSave2
+                jgm.state_qsave(1);
+                break;
+            case 6: // QuickLoad1
+                jgm.state_qload(0);
+                break;
+            case 7: // QuickLoad2
+                jgm.state_qload(1);
+                break;
+            case 8: // Fullscreen
+                UiAdapter::fullscreen();
+                break;
+            case 9: // Pause
+                UiAdapter::pause();
+                break;
+            case 10: // Mute
+                UiAdapter::mute();
+                break;
+            case 11: // FastForward
+                UiAdapter::fastforward(false);
+                break;
+            case 12: // Screenshot
+                UiAdapter::screenshot();
+                break;
+            case 13: // Quit
+                UiAdapter::quit();
+                break;
+                // TODO: IMPLEMENT REWIND
+            case 14: // Rewind
+                std::cout << "Rewind not implemented yet" << std::endl;
+                UiAdapter::rewind(false);
+                break;
             }
         }
 
@@ -573,6 +580,11 @@ void InputManager::ui_events() {
 
     if (uistate.button[11]) {
         UiAdapter::fastforward(true);
+    }
+
+    if (uistate.button[14])
+    {
+        UiAdapter::rewind(true);
     }
 }
 

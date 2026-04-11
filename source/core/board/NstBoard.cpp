@@ -27,6 +27,9 @@
 #include "../NstLog.hpp"
 #include "../NstTimer.hpp"
 #include "NstBoard.hpp"
+
+#include <iostream>
+
 #include "NstBoardNRom.hpp"
 #include "NstBoardAxRom.hpp"
 #include "NstBoardAction53.hpp"
@@ -1162,6 +1165,8 @@ namespace Nes
 
 				name = result->name;
 				Type::Id id = static_cast<Type::Id>(result->id);
+
+				std::cout << "Board = " << id << " Name = " << name << std::endl;
 
 				switch (id)
 				{

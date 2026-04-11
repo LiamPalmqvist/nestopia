@@ -22,10 +22,7 @@ template <typename T>
 struct RingBuffer
 {
     // Initialises the ring buffer with a specified capacity.
-    explicit RingBuffer(const int capacity) : _capacity(capacity), buffer(capacity), head(0), tail(0), _size(0)
-    {
-
-    }
+    explicit RingBuffer(const int capacity) : buffer(capacity), _capacity(capacity), head(0), tail(0), _size(0) {}
     ~RingBuffer() = default;
 
     // Returns the current size of the buffer.
@@ -37,6 +34,7 @@ struct RingBuffer
 
     void push(T data)
     {
+        // we need to make a way to copy a vector into a vector.
         buffer[tail] = std::move(data); // std::move here for O(1)
         tail = (tail + 1) % _capacity; // This increases the tail's position, wrapping around if it goes over the capacity
         if (_size < _capacity) _size++; // check if we're over the capacity
@@ -68,6 +66,11 @@ struct RingBuffer
             std::cout << buffer[index];
         }
         std::cout << std::endl;
+    }
+
+    T operator[](const int index)
+    {
+        return buffer[(head + index) % _capacity]; // This allows us to access the buffer like an array, with the tail as the starting point
     }
 
 private:

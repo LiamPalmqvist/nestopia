@@ -12,6 +12,7 @@ public:
     static void screenshot();
     static void quit();
     static void show_inputmsg(int show);
+    static void rewind(bool on);
 
 private:
 

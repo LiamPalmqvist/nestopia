@@ -66,4 +66,7 @@ public:
     static void nstwin_open();
     static void run_emulation(bool run = true);
     static int handle(int e);
+
+    // Custom
+    static void rewind(bool on);
 };

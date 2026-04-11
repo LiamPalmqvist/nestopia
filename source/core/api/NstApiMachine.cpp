@@ -129,15 +129,23 @@ namespace Nes
 			return emulator.Unload();
 		}
 
+		// This is the part of the emulator which actually starts the emulation
 		Result Machine::Power(const bool on) throw()
 		{
+			// If the machine is already in the desired power state, do nothing
 			if (on == bool(Is(ON)))
 				return RESULT_NOP;
 
+			// If we're trying to power on, but the machine isn't ready, return an error
 			if (on)
 			{
 				try
 				{
+					// If the machine is already on, we want to reset it instead of powering it on again.
+					// This is because some parts of the emulator (such as the PPU) need to be reset when the machine is
+					// powered on, and if we just call Power( true ) when the machine is already on, those parts won't
+					// be reset. By calling Reset( true ) instead, we ensure that the machine is
+					// properly reset when it's already on.
 					emulator.Reset( true );
 				}
 				catch (Result result)
@@ -153,6 +161,7 @@ namespace Nes
 					return RESULT_ERR_GENERIC;
 				}
 
+				// If we successfully powered on the machine, return OK
 				return RESULT_OK;
 			}
 			else
@@ -163,6 +172,7 @@ namespace Nes
 
 		Result Machine::Reset(const bool hard) throw()
 		{
+			// If the machine isn't on, or if it's locked, we can't reset it, so return an error
 			if (!Is(ON) || IsLocked())
 				return RESULT_ERR_NOT_READY;
 
@@ -220,6 +230,7 @@ namespace Nes
 			return result;
 		}
 
+		// TODO: This function loads a state from stream, saving this for later
 		Result Machine::LoadState(std::istream& stream) throw()
 		{
 			if (!Is(GAME,ON) || IsLocked())
@@ -249,6 +260,7 @@ namespace Nes
 			}
 		}
 
+		// TODO: This function saves a state to stream, saving this for later
 		Result Machine::SaveState(std::ostream& stream,Compression compression) const throw()
 		{
 			if (!Is(GAME,ON))
