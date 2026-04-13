@@ -41,6 +41,7 @@
 #include "core/api/NstApiUser.hpp"
 #include "core/api/NstApiFds.hpp"
 #include "core/api/NstApiNsf.hpp"
+#include "custom/RewindManager.hpp"
 #include "version.h"
 
 // NES style upper/lower case ASCII characters
@@ -1420,6 +1421,7 @@ void jg_reset(int hard) {
 
 void jg_exec_frame(void) {
     emulator.Execute(NstVideo, NstSound, NstInput);
+    //jg_rewind_capture();
 }
 
 int jg_game_load(void) {
@@ -1574,6 +1576,9 @@ int jg_game_load(void) {
         }
     }
 
+
+    Nes::Custom::RewindManager::clearBuffer();
+
     // Set the RAM Power State
     machine.SetRamPowerState(settings_nst[RAMPOWERSTATE].val);
 
@@ -1621,6 +1626,21 @@ const void* jg_state_save_raw(void) {
 
 size_t jg_state_size(void) {
     return 0;
+}
+
+/*!
+ * Custom function which interfaces with the Rewind Manager to capture game states.
+ */
+void jg_rewind_capture(void) {
+    std::cout << "Capturing" << std::endl;
+    Nes::Custom::RewindManager::getInstance().capture(new Machine(emulator));
+}
+
+/*!
+ *  Custom function which interfaces with the Rewind Manager to rewind game states.
+ */
+void jg_rewind_step(void) {
+    Nes::Custom::RewindManager::getInstance().rewind(new Machine(emulator));
 }
 
 void jg_media_select(void) {

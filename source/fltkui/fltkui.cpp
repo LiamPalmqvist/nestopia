@@ -71,6 +71,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "version.h"
 
 // Custom
+#include "custom/RewindManager.hpp"
 #include "custom/RingBuffer.hpp"
 
 namespace {
@@ -202,7 +203,18 @@ void exec_emu_vsync(void*) {
 
     if (!paused) {
         for (int i = 0; i < frames * speed; i++) {
-            jgm->exec_frame();
+            // As it turns out, the emulator is actually hidden behind an abstraction layer
+            // Libretro, to be specific. So instead of calling a function like "execute_frame" on the emulator directly,
+            // we have to call it on the JGManager, which then calls it on the Libretro core. This is where the
+            // abstraction layer shows its true colors, and why it's so important to have a good one in place.
+            // jgm->exec_frame() is the function that actually executes a single frame of emulation
+            if (Nes::Custom::RewindManager::getInstance().isRewinding()) {
+                jg_rewind_step();
+                jgm->exec_frame();
+            } else {
+                jgm->exec_frame();
+                jg_rewind_capture();
+            }
         }
     }
 
@@ -217,7 +229,13 @@ void exec_emu_timer(void*) {
 
     if (!paused) {
         for (int i = 0; i < speed; i++) {
-            jgm->exec_frame();
+            if (Nes::Custom::RewindManager::getInstance().isRewinding()) {
+                jg_rewind_step();
+                jgm->exec_frame();
+            } else {
+                jgm->exec_frame();
+                jg_rewind_capture();
+            }
         }
     }
 
@@ -779,20 +797,11 @@ void FltkUi::set_ffspeed(bool on) {
     audiomgr->set_speed(speed);
 }
 
-// Custom
+// // Custom
 void FltkUi::rewind(bool on)
 {
-    if (on)
-    {
-        // do rewinding here
-        // try loading a state from the rewind buffer.
-        std::cout << "Rewinding..." << std::endl;
-    }
-    else
-    {
-        // stop rewinding here
-        std::cout << "Stopped Rewinding." << std::endl;
-    }
+    std::cout << "Rewind " << (on ? "On" : "Off") << std::endl;
+    Nes::Custom::RewindManager::getInstance().setRewinding(on);
 }
 
 void FltkUi::run_emulation(bool run) {

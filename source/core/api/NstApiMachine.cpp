@@ -28,6 +28,8 @@
 #include "../NstState.hpp"
 #include "NstApiMachine.hpp"
 
+#include <iostream>
+
 namespace Nes
 {
 	namespace Api

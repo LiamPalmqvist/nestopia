@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "core/api/NstApiMachine.hpp"
 
 constexpr Fl_Color NstGreen = 0x255f6500;
 constexpr Fl_Color NstPurple = 0x5f578700;
@@ -69,4 +70,6 @@ public:
 
     // Custom
     static void rewind(bool on);
+
+    std::vector<uint8_t> state;
 };

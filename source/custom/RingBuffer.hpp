@@ -45,7 +45,7 @@ struct RingBuffer
     {
         if (_size == 0) throw std::out_of_range("Empty buffer");
         tail = (tail - 1 + _capacity) % _capacity; // Move tail back by one, wrapping around if negative
-        std::cout << buffer[tail] << ": Tail";
+        //std::cout << buffer[tail] << ": Tail";
         _size--; // Shrink the size by one
         return std::move(buffer[tail]); // std::move for O(1)
     }
@@ -71,6 +71,22 @@ struct RingBuffer
     T operator[](const int index)
     {
         return buffer[(head + index) % _capacity]; // This allows us to access the buffer like an array, with the tail as the starting point
+    }
+
+    void clearBuffer()
+    {
+        head = 0;
+        tail = 0;
+        _size = 0;
+    }
+
+    void resize(const int capacity)
+    {
+        buffer.resize(capacity);
+        _capacity = capacity;
+        head = 0;
+        tail = 0;
+        _size = 0;
     }
 
 private:

@@ -26,6 +26,8 @@
 #define NST_API_MACHINE_H
 
 #include <iosfwd>
+#include <vector>
+
 #include "NstApi.hpp"
 
 #ifdef NST_PRAGMA_ONCE
@@ -309,6 +311,15 @@ namespace Nes
 			*/
 			Result LoadState(std::istream& stream) throw();
 
+			/*!
+			 * This method is a custom method for loading a state from a vector. It is not part of the original API.
+			 * It is important that the compression is not enabled when using this method.
+			 * @param data The vector to load the state from.
+			 * @param compression to allow internal compression in the state, default is `NO_COMPRESSION`
+			 * @return result code
+			 */
+			Result LoadStateFromVector(std::vector<uint8_t>& data, Compression compression=NO_COMPRESSION) const throw();
+
 			/**
 			* Saves a state.
 			*
@@ -317,6 +328,15 @@ namespace Nes
 			* @return result code
 			*/
 			Result SaveState(std::ostream& stream,Compression compression=USE_COMPRESSION) const throw();
+
+			/*!
+			 * This method is a custom method for saving a state to a vector. It is not part of the original API.
+			 * It is important that the compression is not enabled when using this method.
+			 * @param state The vector to save the state to.
+			 * @param compression to allow internal compression in the state, default is `NO_COMPRESSION`
+			 * @return result code
+			 */
+			Result SaveStateToVector(std::vector<uint8_t>& state,Compression compression=NO_COMPRESSION) const throw();
 
 			/**
 			* Returns a machine state.

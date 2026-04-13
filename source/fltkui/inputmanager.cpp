@@ -569,7 +569,6 @@ void InputManager::ui_events()
                 break;
                 // TODO: IMPLEMENT REWIND
             case 14: // Rewind
-                std::cout << "Rewind not implemented yet" << std::endl;
                 UiAdapter::rewind(false);
                 break;
             }
@@ -585,6 +584,7 @@ void InputManager::ui_events()
     if (uistate.button[14])
     {
         UiAdapter::rewind(true);
+        std::cout << "rewind" << std::endl;
     }
 }
 

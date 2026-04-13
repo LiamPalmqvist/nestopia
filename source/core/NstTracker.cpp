@@ -310,7 +310,7 @@ namespace Nes
 			if (machine.Is(Api::Machine::ON))
 			{
 				++frame;
-				std::cout << "Frame: " << frame << std::endl;
+				// std::cout << "Frame: " << frame << std::endl;
 
 				try
 				{

@@ -408,6 +408,13 @@ void jg_set_auxinfo(jg_fileinfo_t, int);
  */
 void jg_set_paths(jg_pathinfo_t);
 
+/*!
+ * Custom functions for JGManager
+ */
+void jg_rewind_capture(void);
+
+void jg_rewind_step(void);
+
 #ifdef __cplusplus
 }
 #endif

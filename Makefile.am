@@ -760,6 +760,9 @@ nestopia_SOURCES += \
 nestopia_SOURCES += \
     source/custom/CustomClass.cpp \
     source/custom/CustomClass.hpp \
+    source/custom/DataDiff.hpp \
+    source/custom/RewindManager.cpp \
+    source/custom/RewindManager.hpp \
     source/custom/RingBuffer.hpp
 
 # install full HTML suite
