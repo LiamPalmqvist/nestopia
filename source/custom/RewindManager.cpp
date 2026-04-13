@@ -41,7 +41,7 @@ namespace Nes
             }
 
             // Hypothetically, this is all we need to keep track of the differences between states.
-            std::cout << "Captured state. Buffer size: " << _buffer.size() << std::endl;
+            // std::cout << "Captured state. Buffer size: " << _buffer.size() << std::endl;
             //std::cout << "State contents: " << std::string(_currentState.begin(), _currentState.end()) << std::endl;
         }
 
@@ -80,7 +80,7 @@ namespace Nes
 
             machine->LoadState(iss);
 
-            std::cout << "Rewound state. Buffer size: " << _buffer.size() << std::endl;
+            // std::cout << "Rewound state. Buffer size: " << _buffer.size() << std::endl;
         }
 
         RewindManager& RewindManager::getInstance(int bufferSize)

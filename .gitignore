@@ -48,6 +48,7 @@ source/fltkui/.dirstamp
 /.idea/material_theme_project_new.xml
 /.idea/misc.xml
 /.idea/vcs.xml
+/build
 /build/shaders/shaders/crtea.fs
 /build/shaders/shaders/default.fs
 /build/shaders/shaders/default.vs
@@ -434,3 +435,10 @@ source/fltkui/.dirstamp
 /makeAndRun
 /missing 2
 /missing 3
+/install-sh 5
+
+/install*
+/configure*
+/config*
+/depcomp*
+/missing*

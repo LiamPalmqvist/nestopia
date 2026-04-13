@@ -758,8 +758,6 @@ nestopia_SOURCES += \
 	source/fltkui/fltkui_settings.h
 
 nestopia_SOURCES += \
-    source/custom/CustomClass.cpp \
-    source/custom/CustomClass.hpp \
     source/custom/DataDiff.hpp \
     source/custom/RewindManager.cpp \
     source/custom/RewindManager.hpp \

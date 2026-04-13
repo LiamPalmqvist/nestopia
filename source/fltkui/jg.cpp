@@ -1632,7 +1632,7 @@ size_t jg_state_size(void) {
  * Custom function which interfaces with the Rewind Manager to capture game states.
  */
 void jg_rewind_capture(void) {
-    std::cout << "Capturing" << std::endl;
+    // std::cout << "Capturing" << std::endl;
     Nes::Custom::RewindManager::getInstance().capture(new Machine(emulator));
 }
 
