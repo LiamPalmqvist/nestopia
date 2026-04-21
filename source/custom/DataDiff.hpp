@@ -89,7 +89,6 @@ namespace Nes
                         difference diff = {static_cast<long>(i), newFile[i], difference::Type::Inserted};
                         differences.push_back(diff);
                         ++i;
-                        std::cout << "Pushing inserted byte" << std::endl;
                     }
                 } else if (!newIsLarger && !sameSize) // Here, the old file is larger
                 {
@@ -111,7 +110,6 @@ namespace Nes
                         difference diff = {static_cast<long>(i), oldFile[i], difference::Type::Deleted};
                         differences.push_back(diff);
                         ++i;
-                        std::cout << "Pushing deleted byte" << std::endl;
                     }
                 } else
                 {
@@ -143,7 +141,6 @@ namespace Nes
                 {
                     if (diff.type == difference::Type::Inserted)
                     {
-                        std::cout << "Removing inserted byte at index " << diff.byteIndex << std::endl;
                         // If the difference is an insertion, we need to erase the old byte value at the specified index
                         // Since this is the reverse operation
                         file.erase(file.begin() + diff.byteIndex - offset, file.begin() + diff.byteIndex - offset + 1);
@@ -151,14 +148,13 @@ namespace Nes
                     }
                     else if (diff.type == difference::Type::Deleted)
                     {
-                        std::cout << "Inserting deleted byte at index " << diff.byteIndex << std::endl;
                         // If the difference is a deletion, we need to insert the byte at the specified index
                         // Since this is the reverse operation
                         file.insert(file.begin() + diff.byteIndex, diff.oldFileByte);
                     }
                     else
+                        file[diff.byteIndex - offset] = diff.oldFileByte;
                         // If the difference is a modification, we simply change the byte at the specified index to the old byte value
-                            file[diff.byteIndex - offset] = diff.oldFileByte;
 
                     // This fixes the previous problem of the IRQ portion of the state missing
                 }

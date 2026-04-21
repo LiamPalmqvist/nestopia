@@ -11,12 +11,6 @@ namespace Nes
     {
         void RewindManager::capture(Api::Machine* machine)
         {
-            // if (Nes::Api::Machine::ON)
-            // {
-            //     std::cerr << "RewindManager::capture() - machine pointer is null!" << std::endl;
-            //     return;
-            // }
-
             // open a memory stream to write the savestate data to
             // This is a little dangerous as it exposes the memory directly in the program
             std::ostringstream oss;
