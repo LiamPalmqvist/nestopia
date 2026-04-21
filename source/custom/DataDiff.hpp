@@ -34,8 +34,10 @@ namespace Nes
             {
                 long byteIndex;
                 T oldFileByte;
+                enum class Type { Modified, Inserted, Deleted } type;
 
-                difference(long byteIndex, T oldFileByte) : byteIndex(byteIndex), oldFileByte(oldFileByte) {}
+                difference(long byteIndex, T oldFileByte) : byteIndex(byteIndex), oldFileByte(oldFileByte), type(Type::Modified){}
+                difference(long byteIndex, T oldFileByte, Type type) : byteIndex(byteIndex), oldFileByte(oldFileByte), type(type) {}
             };
 
             /*!
@@ -58,13 +60,17 @@ namespace Nes
                 //std::cout << "new file size: " << newFile.size() << std::endl;
 
                 bool newIsLarger = true;
+                bool sameSize = true;
                 if (oldFile.size() != newFile.size())
-                    if (oldFile.size() > newFile.size())
-                        newIsLarger = false;
+                    sameSize = false;
+                if (oldFile.size() > newFile.size())
+                    newIsLarger = false;
 
-                if (newIsLarger) // Here, the new file is larger
+                if (newIsLarger && !sameSize) // Here, the new file is larger
                 {
-                    for (size_t i = 0; i < oldFile.size(); ++i)
+                    size_t i = 0;
+
+                    while (i < oldFile.size())
                     {
                         //std::cout << "Comparing byte index " << i << std::endl;
                         if (oldFile[i] != newFile[i])
@@ -74,13 +80,42 @@ namespace Nes
                             difference diff = {static_cast<long>(i), oldFile[i]};
                             differences.push_back(diff);
                         }
+                        ++i;
                     }
 
-                    // TODO: Make sure that any leftover bytes are added if files are not equal and there are differences left in the old file
-
-                } else // Here, the old file is larger
+                    // since the new file is larger, we need to insert more differences with the type `Inserted`
+                    while (i < newFile.size())
+                    {
+                        difference diff = {static_cast<long>(i), newFile[i], difference::Type::Inserted};
+                        differences.push_back(diff);
+                        ++i;
+                        std::cout << "Pushing inserted byte" << std::endl;
+                    }
+                } else if (!newIsLarger && !sameSize) // Here, the old file is larger
                 {
-                    for (size_t i = 0; i < newFile.size(); ++i)
+                    size_t i = 0;
+                    while (i < newFile.size())
+                    {
+                        if (oldFile[i] != newFile[i])
+                        {
+                            // we still want the old file since that's what we want to save
+                            difference diff = {static_cast<long>(i), oldFile[i]};
+                            differences.push_back(diff);
+                        }
+                        ++i;
+                    }
+
+                    // Since the old file is larger, there are deleted bits missing so we iterate until the end of the old file and add differences with the type `Deleted`
+                    while (i < oldFile.size())
+                    {
+                        difference diff = {static_cast<long>(i), oldFile[i], difference::Type::Deleted};
+                        differences.push_back(diff);
+                        ++i;
+                        std::cout << "Pushing deleted byte" << std::endl;
+                    }
+                } else
+                {
+                    for (int i = 0; i < newFile.size(); ++i)
                     {
                         if (oldFile[i] != newFile[i])
                         {
@@ -89,9 +124,6 @@ namespace Nes
                             differences.push_back(diff);
                         }
                     }
-
-                    // TODO: Make sure that any leftover bytes are added if files are not equal and there are differences left in the old file
-
                 }
 
                 return differences;
@@ -105,9 +137,35 @@ namespace Nes
              */
             static std::vector<T> applyDifferences(std::vector<T>& file, const std::vector<difference>& differences)
             {
-                for (const auto& diff : differences)
+                int offset = 0;
+                try
                 {
-                    file[diff.byteIndex] = diff.oldFileByte;
+                    for (const auto& diff : differences)
+                    {
+                        if (diff.type == difference::Type::Inserted)
+                        {
+                            std::cout << "Removing inserted byte at index " << diff.byteIndex << std::endl;
+                            // If the difference is an insertion, we need to erase the old byte value at the specified index
+                            // Since this is the reverse operation
+                            file.erase(file.begin() + diff.byteIndex - offset, file.begin() + diff.byteIndex - offset + 1);
+                            ++offset;
+                        }
+                        else if (diff.type == difference::Type::Deleted)
+                        {
+                            std::cout << "Inserting deleted byte at index " << diff.byteIndex << std::endl;
+                            // If the difference is a deletion, we need to insert the byte at the specified index
+                            // Since this is the reverse operation
+                            file.insert(file.begin() + diff.byteIndex, diff.oldFileByte);
+                        }
+                        else
+                            // If the difference is a modification, we simply change the byte at the specified index to the old byte value
+                                file[diff.byteIndex - offset] = diff.oldFileByte;
+
+                        // This fixes the previous problem of the IRQ portion of the state missing
+                    }
+                } catch (std::exception& e)
+                {
+                    std::cerr << e.what() << std::endl;
                 }
 
                 return file;

@@ -442,3 +442,4 @@ source/fltkui/.dirstamp
 /config*
 /depcomp*
 /missing*
+/build/
