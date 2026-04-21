@@ -331,6 +331,7 @@ source/fltkui/.dirstamp
 /build/source/core/board/.deps/nestopia-NstBoardWaixingZs.Po
 /build/source/core/board/.deps/nestopia-NstBoardWhirlwind.Po
 /build/source/core/board/.deps/nestopia-NstBoardZz.Po
+/build/source/custom/.deps/nestopia-RewindManager.Po
 /build/source/core/board/.dirstamp
 /build/source/core/input/.deps/.dirstamp
 /build/source/core/input/.deps/nestopia-NstInpAdapter.Po
@@ -442,4 +443,4 @@ source/fltkui/.dirstamp
 /config*
 /depcomp*
 /missing*
-/build/
+/build/source/

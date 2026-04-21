@@ -138,34 +138,29 @@ namespace Nes
             static std::vector<T> applyDifferences(std::vector<T>& file, const std::vector<difference>& differences)
             {
                 int offset = 0;
-                try
-                {
-                    for (const auto& diff : differences)
-                    {
-                        if (diff.type == difference::Type::Inserted)
-                        {
-                            std::cout << "Removing inserted byte at index " << diff.byteIndex << std::endl;
-                            // If the difference is an insertion, we need to erase the old byte value at the specified index
-                            // Since this is the reverse operation
-                            file.erase(file.begin() + diff.byteIndex - offset, file.begin() + diff.byteIndex - offset + 1);
-                            ++offset;
-                        }
-                        else if (diff.type == difference::Type::Deleted)
-                        {
-                            std::cout << "Inserting deleted byte at index " << diff.byteIndex << std::endl;
-                            // If the difference is a deletion, we need to insert the byte at the specified index
-                            // Since this is the reverse operation
-                            file.insert(file.begin() + diff.byteIndex, diff.oldFileByte);
-                        }
-                        else
-                            // If the difference is a modification, we simply change the byte at the specified index to the old byte value
-                                file[diff.byteIndex - offset] = diff.oldFileByte;
 
-                        // This fixes the previous problem of the IRQ portion of the state missing
-                    }
-                } catch (std::exception& e)
+                for (const auto& diff : differences)
                 {
-                    std::cerr << e.what() << std::endl;
+                    if (diff.type == difference::Type::Inserted)
+                    {
+                        std::cout << "Removing inserted byte at index " << diff.byteIndex << std::endl;
+                        // If the difference is an insertion, we need to erase the old byte value at the specified index
+                        // Since this is the reverse operation
+                        file.erase(file.begin() + diff.byteIndex - offset, file.begin() + diff.byteIndex - offset + 1);
+                        ++offset;
+                    }
+                    else if (diff.type == difference::Type::Deleted)
+                    {
+                        std::cout << "Inserting deleted byte at index " << diff.byteIndex << std::endl;
+                        // If the difference is a deletion, we need to insert the byte at the specified index
+                        // Since this is the reverse operation
+                        file.insert(file.begin() + diff.byteIndex, diff.oldFileByte);
+                    }
+                    else
+                        // If the difference is a modification, we simply change the byte at the specified index to the old byte value
+                            file[diff.byteIndex - offset] = diff.oldFileByte;
+
+                    // This fixes the previous problem of the IRQ portion of the state missing
                 }
 
                 return file;
